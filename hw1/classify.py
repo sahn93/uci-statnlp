@@ -17,3 +17,24 @@ def evaluate(X, yt, cls):
 	acc = metrics.accuracy_score(yt, yp)
 	print("  Accuracy", acc)
 	return acc
+
+def get_most_weighted_feat(logit_cls, speech, highest=True):
+    count_vect = speech.count_vect
+    le = speech.le
+    speakers = le.inverse_transform([i for i in range(logit_cls.coef_.shape[0])])
+    
+    if highest:
+        print("Highest weighted:")
+        most_vec = np.argmax(logit_cls.coef_, axis=1)
+    else:
+        print("Lowest weighted:")
+        most_vec = np.argmin(logit_cls.coef_, axis=1)
+        
+    most_mat = np.zeros((most_vec.size, logit_cls.coef_.shape[1]))
+    most_mat[np.arange(most_vec.size), most_vec] = 1
+
+    most_feats = [arr[0] for arr in count_vect.inverse_transform(most_mat)]
+    d = {}
+    for speaker, most_feat in zip(speakers, most_feats):
+        print(f"{speaker}: {most_feat}")
+    print()
