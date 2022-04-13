@@ -1,6 +1,6 @@
 #!/bin/python
 
-def read_files(tarfname):
+def read_files(tarfname, max_features=None, preprocessor=None, tokenizer=None, ngram_range=(1, 1)):
 	"""Read the training and development data from the speech tar file.
 	The returned object contains various fields that store the data, such as:
 
@@ -28,7 +28,7 @@ def read_files(tarfname):
 	print(len(speech.dev_data))
 	print("-- transforming data and labels")
 	from sklearn.feature_extraction.text import CountVectorizer
-	speech.count_vect = CountVectorizer()
+	speech.count_vect = CountVectorizer(ngram_range=ngram_range, preprocessor=preprocessor, tokenizer=tokenizer, max_features=max_features)
 	speech.trainX = speech.count_vect.fit_transform(speech.train_data)
 	speech.devX = speech.count_vect.transform(speech.dev_data)
 	from sklearn import preprocessing

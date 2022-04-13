@@ -16,3 +16,4 @@ def evaluate(X, yt, cls):
 	yp = cls.predict(X)
 	acc = metrics.accuracy_score(yt, yp)
 	print("  Accuracy", acc)
+	return acc
