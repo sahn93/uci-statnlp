@@ -24,9 +24,23 @@ def run_viterbi(emission_scores, trans_scores, start_scores, end_scores):
     assert emission_scores.shape[1] == L
     N = emission_scores.shape[0]
 
-    y = []
+    T = np.zeros((N, L))
+    bp = np.zeros((N, L), dtype=int)
     for i in range(N):
-        # stupid sequence
-        y.append(i % L)
-    # score set to 0
-    return (0.0, y)
+        for y in range(L):
+            if i == 0:
+                T[i, y] = emission_scores[i, y] + start_scores[y]
+                # bp[i, y] is the start token
+            else:
+                T_candidates = emission_scores[i, y] + trans_scores[:, y] + T[i - 1, :]
+                T[i, y] = np.max(T_candidates)
+                bp[i, y] = np.argmax(T_candidates)
+
+    final_scores = T[-1] + end_scores
+    score = max(final_scores)
+    y = [np.argmax(final_scores)]
+    for i in reversed(range(1, N)):
+        prev_y = bp[i, y[-1]]
+        y.append(prev_y)
+
+    return score, y[::-1]

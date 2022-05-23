@@ -152,6 +152,11 @@ class AccuracyPerLabel(Metric):
         # TODO: Update self.correct_count and self.total_count with counts
         # You should add to the values already stored there.
         # See the `Accuracy.__call__()` to see an example of this.
+        for p, g, m in zip(predictions, gold_labels, mask):
+            if m:
+                self.total_count[g] += 1
+                if p == g:
+                    self.correct_count[g] += 1
 
     def get_metric(self, reset=False):
         # accuracies per label
