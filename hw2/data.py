@@ -102,6 +102,30 @@ def read_texts(tarfname, dname):
     print(dname," read.", "train:", len(data.train), "dev:", len(data.dev), "test:", len(data.test))
     return data
 
+
+def learn_ngram(data, n=1, laplace=0.0, backoff=False, interpolat=[]):
+    """Learns a ngram model from data.train.
+
+    It also evaluates the model on data.dev and data.test, along with generating
+    some sample sentences from the model.
+    """
+    if n < 1:
+        raise ValueError("ngram size should be a positive integer.")
+
+    from lm import Ngram
+    ngram = Ngram(n, laplace=laplace, backoff=backoff, interpolat=interpolat)
+    ngram.fit_corpus(data.train)
+    print("vocab:", len(ngram.vocab()))
+    # evaluate on train, test, and dev
+    print("train:", ngram.perplexity(data.train))
+    print("dev  :", ngram.perplexity(data.dev))
+    print("test :", ngram.perplexity(data.test))
+    from generator import Sampler
+    sampler = Sampler(ngram)
+    for _ in range(2):
+        print("sample: ", " ".join(str(x) for x in sampler.sample_sentence([], max_length=20)))
+    return ngram
+
 def learn_unigram(data):
     """Learns a unigram model from data.train.
 
@@ -134,6 +158,7 @@ def print_table(table, row_names, col_names, latex_file = None):
 
         # compute avg in domain perplexity and add to table
         avg_in_domain_ppl = np.mean(np.diagonal(table))
+        print(avg_in_domain_ppl, file=sys.stderr)
         rows = [row + ['-'] for row in rows]
         rows.append(['Avg In-Domain'] + ['-']*len(rows) + [avg_in_domain_ppl])
         row_names.append('Avg In-Domain')
@@ -159,10 +184,25 @@ def save_lms(dnames, models, output_dir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--n", type=int, default=1,
+                        help="Train n-gram language model")
+    parser.add_argument("--laplace", type=float, default=0.0,
+                        help="Laplace smoothing")
+    parser.add_argument("--backoff", action='store_true', help="Use backoff")
+    parser.add_argument("--interpolat", nargs='+', type=float, default=[], help='Use interpolation with the given coefficients')
     parser.add_argument('--output_dir', type=str, required=True,
                         help='name of directory to write out trained language models. '
                              'If it exists, the previous contents will be overwritten.')
     args = parser.parse_args()
+
+    if args.backoff and args.interpolat:
+        raise ValueError("You can't choose backoff and interpolation at the same time.")
+    
+    if len(args.interpolat) > 0:
+        if len(args.interpolat) != args.n:
+            raise ValueError(f"The number of lambdas should be equal to {args.n} but {len(args.interpolat)}.")
+        if sum(args.interpolat) != 1.0:
+            raise ValueError(f"Sum of the lambdas should be 1 but {sum(args.interpolat)}.")
 
     output_dir = args.output_dir
     if not os.path.isdir(output_dir):
@@ -179,7 +219,8 @@ if __name__ == "__main__":
         print(dname)
         data = read_texts("data/corpora.tar.gz", dname)
         datas.append(data)
-        model = learn_unigram(data)
+        # model = learn_unigram(data)
+        model = learn_ngram(data, n=args.n, laplace=args.laplace, backoff=args.backoff, interpolat=args.interpolat)
         models.append(model)
     # compute the perplexity of all pairs
     n = len(dnames)
