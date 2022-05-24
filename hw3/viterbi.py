@@ -36,7 +36,10 @@ def run_viterbi(emission_scores, trans_scores, start_scores, end_scores):
                 T[i, y] = np.max(T_candidates)
                 bp[i, y] = np.argmax(T_candidates)
 
-    final_scores = T[-1] + end_scores
+    if N > 0:
+        final_scores = T[-1] + end_scores
+    else:
+        final_scores = start_scores + end_scores
     score = max(final_scores)
     y = [np.argmax(final_scores)]
     for i in reversed(range(1, N)):

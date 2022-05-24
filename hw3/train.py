@@ -81,10 +81,43 @@ def train(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("config_path", help="path to configuration file")
+    parser.add_argument("-d", "--embedding_dim", type=int, help="embedding dimension")
+    parser.add_argument("--glove", action='store_true', help="use GloVe embeddings")
+    parser.add_argument("--encoder", action='store_true', help="use LSTM encoder")
+    parser.add_argument("--hidden_size", type=int, help="hidden size")
+    parser.add_argument("-l", "--num_layers", type=int, help="number of layers")
     parser.add_argument("-s", "--serialization_dir", required=True,
                         help="save directory for model, dataset, and metrics")
     args = parser.parse_args()
     config = json.load(open(args.config_path))
+
+    # Override configuration with the arguments
+    if args.embedding_dim:
+        config['model']['embeddings']['embedding_dim'] = args.embedding_dim
+        config['model']['tag_projection']['in_features'] = args.embedding_dim
+
+    if args.glove:
+        config['model']['embeddings']['embedding_path'] = "glove.6B.50d.txt"
+
+    if args.encoder:
+        config['model']['encoder']['type'] = "torch.nn.LSTM"
+        config['model']['encoder']['input_size'] = config['model']['embeddings']['embedding_dim']
+        config['model']['encoder']['dropout'] = 0.1
+        config['model']['encoder']['bidirectional'] = True
+
+        if args.hidden_size:
+            config['model']['encoder']['hidden_size'] = args.hidden_size
+            config['model']['tag_projection']['in_features'] = args.hidden_size * 2  # bidirectional
+        else:
+            raise Exception("hidden_size is not given")
+
+        if args.num_layers:
+            config['model']['encoder']['num_layers'] = args.num_layers
+        else:
+            raise Exception("num_layers is not given")
+
+    print(config)
+
     serialization_dir = args.serialization_dir
     random.seed(config['random_seed'])
     torch.manual_seed(config['random_seed'])
